@@ -1,0 +1,139 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PYTHONPATH
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+# Data Files (Keep structure, ignore content)
+data/raw/*.json
+data/raw/*.csv
+data/transformed/*.json
+data/outputs/*.png
+data/outputs/*.html
+*.csv
+*.parquet
+*.xlsx
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.spyderproject
+.spyproject
+.ropeproject
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Airflow
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+unittest.cfg
+
+# Selenium
+geckodriver.log
+chromedriver.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Notebook temporary files
+notebooks/*_updated.ipynb
+notebooks/executed_*.ipynb
+notebooks/conclusion_*.json
+notebooks/conclusion_*.py
+
+# API Keys & Secrets
+api_keys.json
+secrets.json
+credentials.json
+
+# Documentation builds
+docs/_build/
+docs/build/
+site/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Profiling
+*.prof
+
+# Local development
+local_settings.py
+dev_settings.py

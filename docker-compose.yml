@@ -1,0 +1,191 @@
+# LinkedIn Ghost Jobs ETL Pipeline - Docker Compose Configuration
+# Professional multi-service deployment setup
+
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ghost_jobs_postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-ghost_jobs_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_123}
+      POSTGRES_DB: ${DB_NAME:-ghost_jobs_db}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    networks:
+      - ghost_jobs_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-ghost_jobs_user} -d ${DB_NAME:-ghost_jobs_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for Caching and Task Queue
+  redis:
+    image: redis:7-alpine
+    container_name: ghost_jobs_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ghost_jobs_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Main ETL Application
+  etl_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ghost_jobs_etl
+    environment:
+      - ENVIRONMENT=production
+      - DB_ENGINE=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-ghost_jobs_db}
+      - DB_USERNAME=${DB_USERNAME:-ghost_jobs_user}
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password_123}
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./src:/app/src:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ghost_jobs_network
+    restart: unless-stopped
+    command: ["python", "src/main.py", "run_etl"]
+
+  # Apache Airflow (Optional - for workflow orchestration)
+  airflow-webserver:
+    image: apache/airflow:2.7.0-python3.11
+    container_name: ghost_jobs_airflow_webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USERNAME:-ghost_jobs_user}:${DB_PASSWORD:-secure_password_123}@postgres:5432/airflow_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      AIRFLOW__WEBSERVER__RBAC: 'true'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags:ro
+      - ./logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
+      - ./src:/opt/airflow/src:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ghost_jobs_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    command: >
+      bash -c "
+      airflow db init &&
+      airflow users create 
+        --username admin 
+        --password admin123 
+        --firstname Ghost 
+        --lastname Jobs 
+        --role Admin 
+        --email admin@ghostjobs.com &&
+      airflow webserver
+      "
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.7.0-python3.11
+    container_name: ghost_jobs_airflow_scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${DB_USERNAME:-ghost_jobs_user}:${DB_PASSWORD:-secure_password_123}@postgres:5432/airflow_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags:ro
+      - ./logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
+      - ./src:/opt/airflow/src:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-webserver:
+        condition: service_healthy
+    networks:
+      - ghost_jobs_network
+    restart: unless-stopped
+    command: airflow scheduler
+
+  # Monitoring with Prometheus (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ghost_jobs_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - ghost_jobs_network
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+  # Grafana for Dashboards (Optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ghost_jobs_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - ghost_jobs_network
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+# Named Volumes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# Networks
+networks:
+  ghost_jobs_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
