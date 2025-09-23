@@ -2,8 +2,9 @@
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-# Windows-compatible paths
-PROJECT_ROOT = "c:/Users/Yoga 260/Desktop/linkedin_ghost_jobs_etl"
+# Dynamic project root - works on any system
+import os
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 default_args = {
     'owner': 'data-team',
