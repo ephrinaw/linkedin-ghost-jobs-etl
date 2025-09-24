@@ -7,13 +7,14 @@ Executes the ghost_job_etl.py DAG without requiring Airflow installation
 import subprocess
 import sys
 import time
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
 class WindowsDAGExecutor:
     def __init__(self, dag_file):
         self.dag_file = dag_file
-        self.project_root = "c:/Users/Yoga 260/Desktop/linkedin_ghost_jobs_etl"
+        self.project_root = Path(__file__).parent.absolute()
         
     def execute_task(self, task_name, command):
         """Execute a single DAG task"""
@@ -24,10 +25,13 @@ class WindowsDAGExecutor:
         print(f"{'='*60}")
         
         try:
+            # Split command safely to avoid shell injection
+            cmd_parts = command.split()
+            
             result = subprocess.run(
-                command, 
-                shell=True, 
-                cwd=self.project_root,
+                cmd_parts, 
+                shell=False,  # Security: Disable shell to prevent injection
+                cwd=str(self.project_root),
                 capture_output=True, 
                 text=True
             )
@@ -51,11 +55,11 @@ class WindowsDAGExecutor:
         print(f"Schedule: Daily at 6:00 AM")
         print(f"Execution Time: {datetime.now()}")
         
-        # Define tasks (using available commands)
+        # Define tasks (secure command format)
         tasks = [
-            ("extract_data", f'cd "{self.project_root}" && python src/main.py extract'),
-            ("run_etl_pipeline", f'cd "{self.project_root}" && python src/main.py run_etl'),
-            ("analyze_finland_jobs", f'cd "{self.project_root}" && python finland_ghost_jobs_analyzer.py')
+            ("extract_data", "python src/main.py extract"),
+            ("run_etl_pipeline", "python src/main.py run_etl"),
+            ("analyze_finland_jobs", "python finland_ghost_jobs_analyzer.py")
         ]
         
         # Execute tasks in sequence
