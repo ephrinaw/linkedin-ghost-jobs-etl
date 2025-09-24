@@ -82,10 +82,34 @@ class DatabaseLoader:
                         # Filter out keys that don't exist in the table
                         job_dict = {k: v for k, v in job.items() if k in job_postings.columns.keys()}
                         
-                        # Convert list values to JSON strings
+                        # Handle NaN values and data type conversion
                         for key, value in job_dict.items():
                             if isinstance(value, list):
                                 job_dict[key] = json.dumps(value)
+                            elif pd.isna(value):
+                                # Handle NaN values based on column type
+                                if key in ['days_since_posted', 'description_word_count', 'keyword_count']:
+                                    job_dict[key] = 0  # Default integer values
+                                elif key in ['is_ghost_job', 'active']:
+                                    job_dict[key] = False  # Default boolean values
+                                else:
+                                    job_dict[key] = None  # Allow NULL for other fields
+                            elif key in ['days_since_posted', 'description_word_count', 'keyword_count']:
+                                # Ensure integer fields are actually integers
+                                try:
+                                    job_dict[key] = int(float(value)) if value is not None else 0
+                                except (ValueError, TypeError):
+                                    job_dict[key] = 0
+                            elif key in ['posted_date', 'created_at', 'updated_at', 'extracted_at']:
+                                # Handle datetime fields - convert strings to datetime objects
+                                if isinstance(value, str):
+                                    try:
+                                        from datetime import datetime
+                                        job_dict[key] = pd.to_datetime(value).to_pydatetime()
+                                    except:
+                                        job_dict[key] = None
+                                elif not isinstance(value, (type(None), pd.Timestamp)):
+                                    job_dict[key] = None
                         
                         insert_data.append(job_dict)
                     
