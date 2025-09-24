@@ -71,6 +71,50 @@ docker-compose up --build
 docker-compose run etl python src/main.py run_etl
 ```
 
+### Windows Setup
+
+```bash
+# Windows Task Scheduler setup (automated daily runs)
+setup_windows_scheduler.bat
+
+# Manual execution
+run_etl_daily.bat
+
+# Check scheduler status
+schtasks /query /tn "LinkedIn Ghost Jobs ETL"
+```
+
+## ⏰ Scheduling Options
+
+### Airflow (Linux/macOS/Docker)
+```bash
+# Start Airflow with scheduler (runs daily at 6 AM)
+docker-compose -f docker-compose-airflow.yml up -d
+
+# Access Airflow UI at http://localhost:8080 (admin/admin)
+```
+
+### Windows Task Scheduler
+```bash
+# Setup automated daily runs at 6 AM
+setup_windows_scheduler.bat
+
+# View scheduler status
+schtasks /query /tn "LinkedIn Ghost Jobs ETL"
+
+# Manual trigger
+run_etl_daily.bat
+```
+
+### Platform Support
+
+| Feature | Linux/macOS | Windows | Docker |
+|---------|-------------|---------|--------|
+| Airflow | ✅ Native | ⚠️ WSL/Docker | ✅ Full |
+| Cron | ✅ Native | ❌ No | ✅ Container |
+| Task Scheduler | ❌ No | ✅ Native | ❌ No |
+| Manual Execution | ✅ Python | ✅ Batch | ✅ Container |
+
 ## 📊 Detection Algorithm
 
 Our ghost job detection system uses five key indicators:
@@ -142,7 +186,11 @@ linkedin_ghost_jobs_etl/
 ├── docs/                         # Documentation
 ├── notebooks/                    # Jupyter analysis notebooks
 ├── airflow/                      # Airflow DAGs
-└── scripts/                      # Deployment scripts
+├── scripts/                      # Deployment scripts
+├── run_etl_daily.bat            # Windows daily execution
+├── setup_windows_scheduler.bat  # Windows scheduler setup
+├── windows_dag_scheduler.py     # Windows scheduling logic
+└── WINDOWS_SCHEDULER_SETUP.md   # Windows setup guide
 ```
 
 ## 🔧 Configuration
@@ -159,6 +207,11 @@ MIN_KEYWORD_COUNT = 1             # Required keywords
 LINKEDIN_ENABLED = True
 ATS_APIS_ENABLED = True
 FINNISH_SOURCES_ENABLED = True
+
+# Scheduling Configuration
+SCHEDULE_TIME = "06:00"           # Daily run time
+ENABLE_SCHEDULER = True           # Auto-scheduling
+WINDOWS_SCHEDULER = True          # Windows Task Scheduler
 ```
 
 ## 📚 API Documentation
