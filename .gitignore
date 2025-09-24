@@ -44,6 +44,7 @@ data/raw/*.csv
 data/transformed/*.json
 data/outputs/*.png
 data/outputs/*.html
+data/outputs/*.json
 *.csv
 *.parquet
 *.xlsx
